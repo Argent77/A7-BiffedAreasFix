@@ -1,0 +1,128 @@
+// Performs the decompression operation on all compressed BIFF files of the game.
+DEFINE_ACTION_FUNCTION a7#decompress_biff_files
+BEGIN
+  LAF a7#get_aliases RET aliases RET_ARRAY aliases END
+  ACTION_IF (aliases > 0) BEGIN
+    LAF a7#get_biff_files RET biff RET_ARRAY biff END
+    ACTION_IF (biff > 0) BEGIN
+      // decompressing biffs
+      ACTION_PHP_EACH biff AS bif_file => _ BEGIN
+        DECOMPRESS_BIFF ~%bif_file%~
+      END
+      // cleaning up backup files
+      LAF a7#delete_biff_backups END
+    END ELSE BEGIN
+      WARN ~WARNING: No biff files detected. Skipping biff decompression.~
+    END
+  END ELSE BEGIN
+    WARN ~WARNING: No valid alias path definitions found in the baldur.ini. Skipping biff decompression.~
+  END
+END
+
+
+// Returns an associative array of biff files for the current game.
+DEFINE_ACTION_FUNCTION a7#get_biff_files
+STR_VAR
+  aliases = ~aliases~ // name of the associative alias array
+RET
+  biff  // number of detected biff files
+RET_ARRAY
+  biff  // associative array of biff files (key: biff path, value: reference count)
+BEGIN
+  OUTER_SET biff = 0
+  ACTION_PHP_EACH EVAL ~%aliases%~ AS _ => alias BEGIN
+    OUTER_SPRINT path ~%alias%/data~
+    ACTION_IF (DIRECTORY_EXISTS ~%path%~) BEGIN
+      GET_FILE_ARRAY bif_files ~%path%~ ~^.+\.bif$~
+      ACTION_PHP_EACH bif_files AS _ => bif_file BEGIN
+        LAF FILE_OF_FILESPEC STR_VAR filespec = EVAL ~%bif_file%~ RET file END
+        ACTION_TO_UPPER ~file~
+        ACTION_IF (VARIABLE_IS_SET $biff(~%file%~)) BEGIN
+          OUTER_SET $biff(~%file%~) = $biff(~%file%~) + 1
+        END ELSE BEGIN
+          OUTER_SET $biff(~%file%~) = 1
+          OUTER_SET ++biff
+        END
+      END
+      ACTION_CLEAR_ARRAY ~bif_files~
+    END
+  END
+END
+
+// Returns an associative array with available aliase entries.
+DEFINE_ACTION_FUNCTION a7#get_aliases
+RET
+  aliases   // number of detected alias paths
+RET_ARRAY
+  aliases   // associative array (key: alias name, value: alias path)
+BEGIN
+  OUTER_SET aliases = 0
+  COPY ~baldur.ini~ ~baldur.ini~
+    SPRINT reg_key ~[HC]D[0-9]~
+    SET pos1 = 0
+    WHILE (pos1 >= 0) BEGIN
+      SET pos1 = INDEX_BUFFER(~%reg_key%[ %TAB%]*:=~ pos1)
+      PATCH_IF (pos1 >= 0) BEGIN
+        SET pos2 = INDEX_BUFFER(~[%WNL%]~ pos1)
+        PATCH_IF (pos2 > pos1) BEGIN
+          READ_ASCII pos1 line (pos2 - pos1)
+
+          INNER_PATCH_SAVE key ~%line%~ BEGIN
+            REPLACE_TEXTUALLY ~^\(%reg_key%\).*~ ~\1~
+          END
+
+          INNER_PATCH_SAVE value ~%line%~ BEGIN
+            // normalizing path
+            REPLACE_TEXTUALLY ~^%reg_key%[ %TAB%]*:=[ %TAB%]*\(.*\)~ ~\1~
+            REPLACE_TEXTUALLY ~;.*~ ~~
+            REPLACE_TEXTUALLY ~[ %TAB%]+$~ ~~
+            REPLACE_TEXTUALLY ~[/\\]$~ ~~
+          END
+
+          // e.g. HD0 => C:\Games\Baldur's Gate
+          SPRINT $aliases(~%key%~) ~%value%~
+          SET ++aliases
+          SET pos1 = pos2
+        END
+      END
+    END
+  BUT_ONLY IF_EXISTS
+
+  ACTION_IF (aliases == 0) BEGIN
+    // failsafe action
+    LOG ~No alias definitions found in baldur.ini. Checking predefined biff locations.~
+    ACTION_FOR_EACH path IN ~.~ ~CD1~ ~CD2~ ~CD3~ ~CD4~ ~CD5~ ~CD6~ ~CD7~ ~ALL~ BEGIN
+      ACTION_IF (DIRECTORY_EXISTS ~%path%/data~) BEGIN
+        ACTION_IF (~%path%~ STR_EQ ~.~) BEGIN
+          OUTER_SPRINT key ~HD0~
+        END ELSE BEGIN
+          OUTER_SPRINT key ~%path%~
+        END
+        OUTER_SPRINT $aliases(~%key%~) ~%path%~
+        OUTER_SET ++aliases
+      END
+    END
+  END
+END
+
+// Deletes all backup files created by the DECOMPRESS_BIFF action.
+DEFINE_ACTION_FUNCTION a7#delete_biff_backups
+STR_VAR
+  aliases = ~aliases~ // name of the associative alias array
+  biff = ~biff~       // name of the associative biff array
+BEGIN
+  ACTION_PHP_EACH EVAL ~%aliases%~ AS _ => alias BEGIN
+    OUTER_SPRINT path ~%alias%/data~
+    ACTION_IF (DIRECTORY_EXISTS ~%path%~) BEGIN
+      GET_FILE_ARRAY bif_files ~%path%~ ~^fl#biffbackup_.+\.bif$~
+      ACTION_PHP_EACH bif_files AS _ => bif_file BEGIN
+        LAF FILE_OF_FILESPEC STR_VAR filespec = EVAL ~%bif_file%~ RET file END
+        OUTER_PATCH_SAVE file ~%file%~ BEGIN DELETE_BYTES 0 14 END
+        ACTION_TO_UPPER ~file~
+        ACTION_IF (VARIABLE_IS_SET $EVAL ~%biff%~(~%file%~)) BEGIN
+          DELETE + ~%bif_file%~
+        END
+      END
+    END
+  END
+END

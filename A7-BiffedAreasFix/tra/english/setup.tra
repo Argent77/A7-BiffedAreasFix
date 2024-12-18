@@ -1,0 +1,7 @@
+@0 = ~Fix areas~
+@1 = ~By placing only WAV files in the override folder (recommended)~
+@2 = ~By placing all except TIS files in the override folder~
+@3 = ~By placing all files in the override folder (requires lots of disk space)~
+@4 = ~By decompressing compressed BIFF files (requires lots of disk space) - See README!~
+
+@100 = ~Only available for games based on the original BG2 engine.~

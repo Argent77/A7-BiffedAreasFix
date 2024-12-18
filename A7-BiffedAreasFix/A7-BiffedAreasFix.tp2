@@ -1,0 +1,104 @@
+BACKUP ~weidu_external/backup/A7-BiffedAreasFix~
+SUPPORT ~https://github.com/Argent77/A7-BiffedAreasFix~
+VERSION ~1.0~
+
+README ~A7-BiffedAreasFix/doc/readme-%LANGUAGE%.txt~
+       ~A7-BiffedAreasFix/doc/readme.txt~
+
+LANGUAGE ~English~
+         ~english~
+         ~A7-BiffedAreasFix/tra/english/setup.tra~
+
+///////////////////////////////////////////////////
+// Placing only WAV files in the override folder //
+///////////////////////////////////////////////////
+BEGIN @1 // By placing only WAV files in the override folder (recommended)
+REQUIRE_PREDICATE (ENGINE_IS ~soa tob~) @100 // Only available for games based on the original BG2 engine.
+SUBCOMPONENT @0 // Fix areas
+DESIGNATED 1
+LABEL ~A7-BIFFEDAREASFIX-OVERRIDE_WAV~
+
+INCLUDE ~A7-BiffedAreasFix/lib/a7_area_references.tpa~
+LAF a7#get_are_resources
+  INT_VAR
+    compressed_only = 1
+    bmp = 0
+    mos = 0
+    tis = 0
+    wav = 1
+    wed = 0
+  RET_ARRAY
+    resources
+END
+
+ACTION_PHP_EACH resources AS resource => ref_count BEGIN
+  COPY_EXISTING ~%resource%~ ~override~ IF_EXISTS
+END
+
+
+/////////////////////////////////////////////////////////
+// Placing all except TIS files in the override folder //
+/////////////////////////////////////////////////////////
+BEGIN @2 // By placing all except TIS files in the override folder
+REQUIRE_PREDICATE (ENGINE_IS ~soa tob~) @100 // Only available for games based on the original BG2 engine.
+SUBCOMPONENT @0 // Fix areas
+DESIGNATED 2
+LABEL ~A7-BIFFEDAREASFIX-OVERRIDE_NO_TIS~
+
+INCLUDE ~A7-BiffedAreasFix/lib/a7_area_references.tpa~
+LAF a7#get_are_resources
+  INT_VAR
+    compressed_only = 1
+    bmp = 1
+    mos = 1
+    tis = 0
+    wav = 1
+    wed = 1
+  RET_ARRAY
+    resources
+END
+
+ACTION_PHP_EACH resources AS resource => ref_count BEGIN
+  COPY_EXISTING ~%resource%~ ~override~ IF_EXISTS
+END
+
+
+//////////////////////////////////////////////
+// Placing all files in the override folder //
+//////////////////////////////////////////////
+BEGIN @3 // By placing all files in the override folder (requires lots of disk space)
+REQUIRE_PREDICATE (ENGINE_IS ~soa tob~) @100 // Only available for games based on the original BG2 engine.
+SUBCOMPONENT @0 // Fix areas
+DESIGNATED 3
+LABEL ~A7-BIFFEDAREASFIX-OVERRIDE_ALL~
+
+INCLUDE ~A7-BiffedAreasFix/lib/a7_area_references.tpa~
+LAF a7#get_are_resources
+  INT_VAR
+    compressed_only = 1
+    bmp = 1
+    mos = 1
+    tis = 1
+    wav = 1
+    wed = 1
+  RET_ARRAY
+    resources
+END
+
+ACTION_PHP_EACH resources AS resource => ref_count BEGIN
+  COPY_EXISTING ~%resource%~ ~override~ IF_EXISTS
+END
+
+
+/////////////////////////////////////////
+// Decompressing compressed BIFF files //
+/////////////////////////////////////////
+BEGIN @4 // By decompressing compressed BIFF files (requires lots of disk space) - See README!
+REQUIRE_PREDICATE (ENGINE_IS ~soa tob~) @100 // Only available for games based on the original BG2 engine.
+SUBCOMPONENT @0 // Fix areas
+DESIGNATED 4
+NO_LOG_RECORD
+LABEL ~A7-BIFFEDAREASFIX-DECOMPRESS_BIFFS~
+
+INCLUDE ~A7-BiffedAreasFix/lib/a7_decompress_biffs.tph~
+LAF a7#decompress_biff_files END
