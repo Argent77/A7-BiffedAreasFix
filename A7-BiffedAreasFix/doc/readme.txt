@@ -61,11 +61,12 @@ Information for modders
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 The WeiDU script file "a7_area_references.tpa" in the lib folder of the mod can be used to help
-detecting referenced in your own mod.
+detecting referenced game resources in your own mod.
 
 Simply include the script file in your own WeiDU script and call the action function "a7#get_are_resources"
 to collect all resources referenced by your ARE files in an associative array. The resulting array
-can then be used in subsequent operations.
+can then be used in subsequent operations. The function has a cumulative effect when called multiple
+times (e.g. with different area file patterns).
 
 More details about available parameters and return values can be found in the library file itself.
 The main script of this mod shows several examples how this function can be used.
