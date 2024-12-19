@@ -89,7 +89,7 @@ BEGIN
       END
 
     END ELSE BEGIN
-      PATCH_WARN ~WARNING: a7#collect_compressed_resources: Not an area file: %SOURCE_FILE%~
+      PATCH_WARN ~WARNING: a7#get_are_resources: Not an area file: %SOURCE_FILE%~
     END
   BUT_ONLY IF_EXISTS
 END
